@@ -101,10 +101,8 @@
             fractionValue.textContent = fraction;
 
             let value;
-            if (exponent === 15) {
-                if (fraction == 7) {
-                    value = "NaN";
-                }
+            if (exponent === 15 && fraction == 7) {
+                  value = "NaN";
             } else if (exponent === 0) {
                 if (fraction === 0) {
                     value = sign ? "-0" : "0";
