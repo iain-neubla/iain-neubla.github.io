@@ -127,10 +127,6 @@
             if (typeof value === 'string') {
                 if (value.toLowerCase() === 'nan') {
                     return [0, 1, 1, 1, 1, 1, 0, 1]; // Canonical NaN
-                } else if (value.toLowerCase() === 'infinity') {
-                    return [0, 1, 1, 1, 1, 0, 0, 0]; // +Infinity
-                } else if (value.toLowerCase() === '-infinity') {
-                    return [1, 1, 1, 1, 1, 0, 0, 0]; // -Infinity
                 }
             }
 
