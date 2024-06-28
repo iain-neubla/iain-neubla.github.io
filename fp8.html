@@ -124,7 +124,7 @@
                 value = (sign ? -1 : 1) * (1 + fraction / 8) * Math.pow(2, exponent - 7);
             }
 
-            hexadecimalValue.textContent = '0x' + bitsToHex(bits);
+            hexadecimalValue.textContent = '0x' + parseInt(bits.join(''), 2);
             floatInput.value = value;
         }
 
