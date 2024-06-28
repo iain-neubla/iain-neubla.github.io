@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>FP8 E4M3 Decode</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+    </head>
+    <body
+        class="bg-gray-100 flex flex-col justify-center items-center min-h-screen p-4"
+    >
+        <div class="fixed top-0 left-0 w-full bg-white p-4 shadow-md z-10">
+            <div class="container mx-auto flex justify-between items-center">
+                <span class="text-gray-800"
+                    ><a href="#">Iain Apreotesei (iain-neubla)</a></span
+                >
+                <div class="flex space-x-4">
+                    <a
+                        href="/fp8.html"
+                        class="text-gray-600 hover:text-blue-500"
+                        >FP8 (E4M3)</a
+                    >
+                    <a href="#" class="text-gray-600 hover:text-blue-500"
+                        >FP16</a
+                    >
+                </div>
+            </div>
+        </div>
+        <div class="bg-white shadow-lg rounded-lg p-6 w-full max-w-2xl">
+            <h1 class="text-2xl font-bold text-center mb-6">FP16 Decoder</h1>
+
+            <div class="flex mb-4">
+                <input
+                    type="text"
+                    id="floatInput"
+                    value="1"
+                    placeholder="Enter value"
+                    class="flex-grow mr-2 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                    onclick="updateFromFloat()"
+                    class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                    Decode
+                </button>
+            </div>
+
+            <div class="flex justify-between mb-2 text-sm text-gray-600">
+                <span>Sign</span>
+                <span>Exponent</span>
+                <span>Fraction</span>
+            </div>
+            <div id="bitContainer" class="flex justify-between mb-6"></div>
+
+            <div class="grid grid-cols-2 gap-2 text-sm">
+                <p class="font-semibold">Sign:</p>
+                <p id="signValue"></p>
+                <p class="font-semibold">Exponent:</p>
+                <p id="exponentValue"></p>
+                <p class="font-semibold">Fraction:</p>
+                <p id="fractionValue"></p>
+                <p class="font-semibold">Decimal:</p>
+                <p id="decimalValue"></p>
+            </div>
+        </div>
+
+        <div class="bg-gray-100 p-4 rounded-md shadow-md mt-10">
+            <p class="text-gray-800">Read the Wikipedia page on</p>
+            <a
+                href="https://en.wikipedia.org/wiki/Half-precision_floating-point_format"
+                class="inline-block mt-2 text-blue-500 hover:text-blue-700 underline"
+            >
+                Half-precision floating point format
+            </a>
+        </div>
+
+        <script>
+            const bitContainer = document.getElementById("bitContainer");
+            const signValue = document.getElementById("signValue");
+            const exponentValue = document.getElementById("exponentValue");
+            const fractionValue = document.getElementById("fractionValue");
+            const decimalValue = document.getElementById("decimalValue");
+            const floatInput = document.getElementById("floatInput");
+
+            let bits = new Array(16).fill(0);
+
+            function createBitElements() {
+                bitContainer.innerHTML = "";
+                for (let i = 0; i < 16; i++) {
+                    const bit = document.createElement("div");
+                    bit.className = `w-8 h-8 border flex justify-center items-center cursor-pointer text-xs
+                                 ${i === 0 ? "border-red-500" : i < 6 ? "border-yellow-500" : "border-green-500"}`;
+                    bit.textContent = "0";
+                    bit.onclick = () => toggleBit(i);
+                    bitContainer.appendChild(bit);
+                }
+            }
+
+            function toggleBit(index) {
+                bits[index] = 1 - bits[index];
+                updateDisplay();
+            }
+
+            function updateDisplay() {
+                const bitElements = bitContainer.children;
+                for (let i = 0; i < 16; i++) {
+                    bitElements[i].textContent = bits[i];
+                }
+
+                const sign = bits[0];
+                const exponent = bitsToInt(bits.slice(1, 6));
+                const fraction = bitsToInt(bits.slice(6));
+
+                signValue.textContent = sign;
+                exponentValue.textContent = exponent;
+                fractionValue.textContent = fraction;
+
+                let value;
+                if (exponent === 31) {
+                    if (fraction === 0) {
+                        value = sign ? "-Infinity" : "Infinity";
+                    } else {
+                        value = "NaN";
+                    }
+                } else if (exponent === 0) {
+                    if (fraction === 0) {
+                        value = sign ? "-0" : "0";
+                    } else {
+                        value =
+                            (sign ? -1 : 1) *
+                            (fraction / 1024) *
+                            Math.pow(2, -14);
+                    }
+                } else {
+                    value =
+                        (sign ? -1 : 1) *
+                        (1 + fraction / 1024) *
+                        Math.pow(2, exponent - 15);
+                }
+
+                decimalValue.textContent =
+                    typeof value === "number" ? value.toFixed(6) : value;
+                floatInput.value = value;
+            }
+
+            function bitsToInt(bitArray) {
+                return bitArray.reduce(
+                    (acc, bit, index) =>
+                        acc + (bit << (bitArray.length - 1 - index)),
+                    0,
+                );
+            }
+
+            function floatToFP16(value) {
+                if (typeof value === "string") {
+                    if (value.toLowerCase() === "nan") {
+                        return [0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1]; // Canonical NaN
+                    } else if (value.toLowerCase() === "infinity") {
+                        return [0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]; // +Infinity
+                    } else if (value.toLowerCase() === "-infinity") {
+                        return [1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]; // -Infinity
+                    }
+                }
+
+                const floatValue = parseFloat(value);
+                if (isNaN(floatValue)) {
+                    return [0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1]; // Canonical NaN
+                }
+
+                const sign = floatValue < 0 ? 1 : 0;
+                const absValue = Math.abs(floatValue);
+
+                if (absValue === 0) {
+                    return [sign, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+                }
+
+                let exponent = Math.floor(Math.log2(absValue)) + 15;
+                let fraction;
+
+                if (exponent < 1) {
+                    // Subnormal number
+                    exponent = 0;
+                    fraction = Math.round((absValue / Math.pow(2, -14)) * 1024);
+                } else if (exponent > 30) {
+                    // Infinity
+                    return [sign, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+                } else {
+                    fraction = Math.round(
+                        (absValue / Math.pow(2, exponent - 15) - 1) * 1024,
+                    );
+                }
+
+                return [
+                    sign,
+                    ...intToBitArray(exponent, 5),
+                    ...intToBitArray(fraction, 10),
+                ];
+            }
+
+            function intToBitArray(value, bits) {
+                return Array.from(
+                    { length: bits },
+                    (_, i) => (value >> (bits - 1 - i)) & 1,
+                );
+            }
+
+            function updateFromFloat() {
+                const inputValue = floatInput.value.trim();
+                bits = floatToFP16(inputValue);
+                updateDisplay();
+            }
+
+            createBitElements();
+            updateDisplay();
+        </script>
+    </body>
+</html>
