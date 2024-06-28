@@ -147,9 +147,9 @@
                 // Subnormal number
                 exponent = 0;
                 fraction = Math.round(absValue / Math.pow(2, -6) * 8);
-            } else if (exponent > 14) {
-                // Infinity
-                return [sign, 1, 1, 1, 1, 0, 0, 0];
+            } else if (exponent > 15) {
+                // Return max normal
+                return [sign, 1, 1, 1, 1, 1, 1, 0];
             } else {
                 fraction = Math.round((absValue / Math.pow(2, exponent - 7) - 1) * 8);
             }
