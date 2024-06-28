@@ -45,6 +45,15 @@
         </div>
 	</div>
 
+	<div class="bg-white p-4 rounded-md shadow-md mt-10">
+	   <h2 class="text-xl font-semibold mb-2">Formula</h2>
+        <p>value = (-1)<sup>s</sup> × (1 + m) × 2<sup>e - 7</sup></p>
+	</div>
+
+
+	<div class="bg-gray-100 p-4 rounded-md shadow-md mt-10" id="formulaStepsContainer">
+	</div>
+
     <div class="bg-gray-100 p-4 rounded-md shadow-md mt-10">
     <p class="text-gray-800">
         FP8 Formats for Deep Learning
@@ -126,6 +135,8 @@
 
             hexadecimalValue.textContent = '0x' + parseInt(bits.join(''), 2).toString(16);
             floatInput.value = value;
+
+            displayFormulaResults(calculateFP8Formula(bits));
         }
 
         function bitsToInt(bitArray) {
@@ -196,6 +207,54 @@
         function hexToBitArray(hexString) {
           const binaryString = parseInt(hexString, 16).toString(2);
           return binaryString.split('');
+        }
+
+        function calculateFP8Formula(bits) {
+            const sign = bits[0] === '1' ? -1 : 1;
+            const exponent = parseInt(bits.slice(1, 5).join(''), 2);
+            let mantissa = 1;
+            let bitValue = 1.0/2;
+            bits.slice(5).forEach((bit) => {
+              if (bit == "1") {
+                mantissa += bitValue;
+              }
+
+              bitValue /= 2;
+            });
+
+            const steps = [
+                { name: 'Determine sign', result: `${sign === -1 ? 'Negative' : 'Positive'} (${bits[0]})` },
+                { name: 'Calculate exponent', result: `${exponent} (binary: ${bits.slice(1, 5).join('')})` },
+                { name: 'Calculate mantissa', result: `${mantissa} (binary: 1.${bits.slice(5).join('')})` },
+            ];
+
+            let value;
+            if (exponent === 0) {
+                value = 0;
+                steps.push({ name: 'Special case', result: 'Exponent is 0, value is 0' });
+            } else {
+                const scaledMantissa = mantissa * Math.pow(2, exponent - 7);
+                steps.push({ name: 'Scale mantissa', result: `${mantissa} × 2^(${exponent} - 7) = ${scaledMantissa}` });
+                value = sign * scaledMantissa;
+                steps.push({ name: 'Apply sign', result: `${sign} × ${scaledMantissa} = ${value}` });
+            }
+
+            return { value, steps };
+        }
+
+        function displayFormulaResults(result) {
+            const container = document.getElementById('formulaStepsContainer');
+            container.innerHTML = `
+                <h2 class="text-xl font-semibold mb-2">Step-by-Step Calculation:</h2>
+                ${result.steps.map(step => `
+                    <div class="mb-2">
+                        <span class="font-semibold">${step.name}:</span> ${step.result}
+                    </div>
+                `).join('')}
+                <div class="mt-4 text-lg font-bold">
+                    Final Result: ${isNaN(result.value) ? 'Invalid input' : result.value}
+                </div>
+            `;
         }
 
         createBitElements();
