@@ -41,7 +41,7 @@
             <p class="font-semibold">Sign:</p><p id="signValue"></p>
             <p class="font-semibold">Exponent:</p><p id="exponentValue"></p>
             <p class="font-semibold">Fraction:</p><p id="fractionValue"></p>
-            <p class="font-semibold">Decimal:</p><p id="decimalValue"></p>
+            <p class="font-semibold">Hexadecimal:</p><p id="hexadecimalValue"></p>
         </div>
 	</div>
 
@@ -64,7 +64,7 @@
         const signValue = document.getElementById('signValue');
         const exponentValue = document.getElementById('exponentValue');
         const fractionValue = document.getElementById('fractionValue');
-        const decimalValue = document.getElementById('decimalValue');
+        const hexadecimalValue = document.getElementById('hexadecimalValue');
         const floatInput = document.getElementById('floatInput');
 
         let bits = new Array(8).fill(0);
@@ -84,6 +84,17 @@
         function toggleBit(index) {
             bits[index] = 1 - bits[index];
             updateDisplay();
+        }
+
+        function bitsToInt(bitArray) {
+                    return bitArray.reduce((acc, bit, index) => acc + (bit << (bitArray.length - 1 - index)), 0);
+        }
+
+        function bitsToHex(bitArray) {
+            return ((bitArray[0] << 15) | (bitsToInt(bitArray.slice(1, 6)) << 10) | bitsToInt(bitArray.slice(6)))
+                .toString(16)
+                .toUpperCase()
+                .padStart(4, '0');
         }
 
         function updateDisplay() {
@@ -113,7 +124,7 @@
                 value = (sign ? -1 : 1) * (1 + fraction / 8) * Math.pow(2, exponent - 7);
             }
 
-            decimalValue.textContent = typeof value === 'number' ? value.toFixed(6) : value;
+            hexadecimalValue.textContent = '0x' + bitsToHex(bits);
             floatInput.value = value;
         }
 
@@ -167,8 +178,25 @@
 
         function updateFromFloat() {
             const inputValue = floatInput.value.trim();
-            bits = floatToFP8E4M3(inputValue);
+
+            if (isValidHex(inputValue)) {
+              bits = hexToBitArray(inputValue);
+            }
+            else {
+              bits = floatToFP8E4M3(inputValue);
+            }
+
             updateDisplay();
+        }
+
+        function isValidHex(str) {
+          return /^#?[0-9A-Fa-f]+$/.test(str);
+        }
+
+        function hexToBitArray(hexString) {
+          const binaryString = parseInt(hexString, 16).toString(2);
+          const paddedBinaryString = binaryString.padStart(hexString.length * 4, '0');
+          return paddedBinaryString.split('').map(Number);
         }
 
         createBitElements();
